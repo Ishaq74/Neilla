@@ -9,10 +9,6 @@ datasource db {
   provider = "sqlite"
 }
 
-enum UserRole {
-  ADMIN
-  USER
-}
 
 enum ReservationStatus {
   PENDING
@@ -26,8 +22,6 @@ model User {
   firstName String
   lastName  String
   email     String   @unique
-  password  String
-  role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -254,13 +248,7 @@ model ThemeSetting {
   @@map("theme_settings")
 }
 
-model UserRoleAssignment {
-  id        String   @id @default(cuid())
-  userId    String
-  role      UserRole
-  createdAt DateTime @default(now())
-  @@map("user_roles")
-}
+// RBAC et organisations gérés par Better Auth
 
 model BlogCategory {
   id        String   @id @default(cuid())

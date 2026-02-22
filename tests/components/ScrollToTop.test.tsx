@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+import React from 'react';
 import ScrollToTop from '../../src/components/ScrollToTop';
 
 describe('ScrollToTop', () => {

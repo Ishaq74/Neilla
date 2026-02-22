@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { vi } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Contact from '@/components/Contact';
 

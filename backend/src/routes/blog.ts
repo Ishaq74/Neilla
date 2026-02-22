@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -35,7 +35,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { title, slug, content, excerpt, coverImageUrl, authorId, category, status, tags, publishedAt } = req.body;
     if (!title || !slug || !content || !authorId) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -46,7 +46,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { title, slug, content, excerpt, coverImageUrl, authorId, category, status, tags, publishedAt } = req.body;
     const post = await prisma.blogPost.update({
@@ -59,7 +59,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.blogPost.delete({ where: { id: req.params.id } });
     res.json({ message: 'Article supprimé' });
@@ -69,7 +69,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // CRUD Blog Categories
-router.post('/categories', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/categories', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, slug, color, description } = req.body;
     if (!name || !slug) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -80,7 +80,7 @@ router.post('/categories', authenticateToken, requireAdmin, async (req, res) => 
   }
 });
 
-router.put('/categories/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/categories/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, slug, color, description } = req.body;
     const category = await prisma.blogCategory.update({
@@ -93,7 +93,7 @@ router.put('/categories/:id', authenticateToken, requireAdmin, async (req, res) 
   }
 });
 
-router.delete('/categories/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/categories/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.blogCategory.delete({ where: { id: req.params.id } });
     res.json({ message: 'Catégorie supprimée' });

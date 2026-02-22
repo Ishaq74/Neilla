@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -9,7 +9,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const media = await prisma.mediaLibrary.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(media);
+    if (!media || media.length === 0) {
+      return res.status(404).json({ error: 'No media found' });
+    }
+    res.status(200).json(media);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -20,14 +23,14 @@ router.get('/:id', async (req, res) => {
   try {
     const media = await prisma.mediaLibrary.findUnique({ where: { id: req.params.id } });
     if (!media) return res.status(404).json({ error: 'Fichier non trouvé' });
-    res.json(media);
+    res.status(200).json(media);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 // Create a new media (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, fileUrl, fileType, fileSize, altText, category } = req.body;
     if (!name || !fileUrl || !fileType) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -39,7 +42,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update a media (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, fileUrl, fileType, fileSize, altText, category } = req.body;
     const media = await prisma.mediaLibrary.update({
@@ -53,7 +56,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete a media (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.mediaLibrary.delete({ where: { id: req.params.id } });
     res.json({ message: 'Fichier supprimé' });

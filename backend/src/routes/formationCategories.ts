@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -33,7 +33,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create a new formation category (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Le nom est requis' });
@@ -45,7 +45,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update a formation category (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name } = req.body;
     const category = await prisma.formationCategory.update({
@@ -59,7 +59,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete a formation category (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.formationCategory.delete({ where: { id: req.params.id } });
     res.json({ message: 'Catégorie supprimée' });

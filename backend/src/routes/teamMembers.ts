@@ -9,7 +9,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const members = await prisma.teamMember.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(members);
+    if (!members || members.length === 0) {
+      return res.status(404).json({ error: 'No team members found' });
+    }
+    res.status(200).json(members);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -20,7 +23,7 @@ router.get('/:id', async (req, res) => {
   try {
     const member = await prisma.teamMember.findUnique({ where: { id: req.params.id } });
     if (!member) return res.status(404).json({ error: 'Membre non trouvé' });
-    res.json(member);
+    res.status(200).json(member);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }

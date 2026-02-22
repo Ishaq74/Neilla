@@ -1,14 +1,16 @@
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { db } from '../database.js';
-import { Formation } from '@prisma/client';
+import { auth } from '../lib/auth';
+import { prisma } from '../lib/prisma';
 const router = express.Router();
 
 // Get all formations
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const formations = db.getAllFormations();
-    res.json(formations);
+    const formations = await prisma.formation.findMany({ orderBy: { createdAt: 'desc' } });
+    if (!formations || formations.length === 0) {
+      return res.status(404).json({ error: 'No formations found' });
+    }
+    res.status(200).json(formations);
   } catch (error) {
     console.error('Error fetching formations:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -16,13 +18,13 @@ router.get('/', (req, res) => {
 });
 
 // Get formation by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const formation = db.getFormationById(req.params.id);
+    const formation = await prisma.formation.findUnique({ where: { id: req.params.id } });
     if (!formation) {
       return res.status(404).json({ error: 'Formation not found' });
     }
-    res.json(formation);
+    res.status(200).json(formation);
   } catch (error) {
     console.error('Error fetching formation:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -30,25 +32,23 @@ router.get('/:id', (req, res) => {
 });
 
 // Create new formation (admin only)
-router.post('/', authenticateToken, requireAdmin, (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { title, description, duration, level, price, maxStudents } = req.body;
-    
     if (!title || !description || !duration || !level || !price) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    const formationData = {
-      title,
-      description,
-      duration: parseInt(duration),
-      level,
-      price: parseFloat(price),
-      maxStudents: maxStudents ? parseInt(maxStudents) : 10,
-      isActive: true
-    };
-
-    const newFormation = db.createFormation(formationData);
+    const newFormation = await prisma.formation.create({
+      data: {
+        title,
+        description,
+        duration: parseInt(duration),
+        level,
+        price: parseFloat(price),
+        maxStudents: maxStudents ? parseInt(maxStudents) : 10,
+        isActive: true,
+      },
+    });
     res.status(201).json(newFormation);
   } catch (error) {
     console.error('Error creating formation:', error);
@@ -57,11 +57,10 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Update formation (admin only)
-router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { title, description, duration, level, price, maxStudents, isActive } = req.body;
-    
-    const updateData: Partial<Formation> = {};
+    const updateData: any = {};
     if (title) updateData.title = title;
     if (description) updateData.description = description;
     if (duration) updateData.duration = parseInt(duration);
@@ -69,12 +68,10 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
     if (price) updateData.price = parseFloat(price);
     if (maxStudents) updateData.maxStudents = parseInt(maxStudents);
     if (isActive !== undefined) updateData.isActive = isActive;
-
-    const updatedFormation = db.updateFormation(req.params.id, updateData);
-    if (!updatedFormation) {
-      return res.status(404).json({ error: 'Formation not found' });
-    }
-
+    const updatedFormation = await prisma.formation.update({
+      where: { id: req.params.id },
+      data: updateData,
+    });
     res.json(updatedFormation);
   } catch (error) {
     console.error('Error updating formation:', error);
@@ -83,13 +80,9 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Delete formation (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
-    const deleted = db.deleteFormation(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Formation not found' });
-    }
-
+    await prisma.formation.delete({ where: { id: req.params.id } });
     res.json({ message: 'Formation deleted successfully' });
   } catch (error) {
     console.error('Error deleting formation:', error);

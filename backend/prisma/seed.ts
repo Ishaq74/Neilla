@@ -120,8 +120,6 @@ async function main() {
         firstName: 'Admin',
         lastName: 'Principal',
         email: 'admin@beauty.com',
-        password: '$2a$10$hash', // à remplacer par un vrai hash bcrypt
-        role: 'ADMIN',
       },
     ],
   });

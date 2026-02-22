@@ -12,7 +12,10 @@ router.get('/', async (req, res) => {
       include: { services: true },
       orderBy: { name: 'asc' },
     });
-    res.json(categories);
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ error: 'No categories found' });
+    }
+    res.status(200).json(categories);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -26,14 +29,15 @@ router.get('/:id', async (req, res) => {
       include: { services: true },
     });
     if (!category) return res.status(404).json({ error: 'Catégorie non trouvée' });
-    res.json(category);
+    res.status(200).json(category);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 // Create a new service category (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+import { auth } from '../lib/auth';
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Le nom est requis' });
@@ -45,7 +49,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update a service category (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name } = req.body;
     const category = await prisma.serviceCategory.update({
@@ -59,7 +63,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete a service category (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.serviceCategory.delete({ where: { id: req.params.id } });
     res.json({ message: 'Catégorie supprimée' });

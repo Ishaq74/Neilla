@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -9,7 +9,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const settings = await prisma.siteSetting.findMany({ orderBy: { category: 'asc' } });
-    res.json(settings);
+    if (!settings || settings.length === 0) {
+      return res.status(404).json({ error: 'No settings found' });
+    }
+    res.status(200).json(settings);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -20,14 +23,14 @@ router.get('/:id', async (req, res) => {
   try {
     const setting = await prisma.siteSetting.findUnique({ where: { id: req.params.id } });
     if (!setting) return res.status(404).json({ error: 'Paramètre non trouvé' });
-    res.json(setting);
+    res.status(200).json(setting);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 // Create a new site setting (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { key, value, category } = req.body;
     if (!key || !category) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -39,7 +42,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update a site setting (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { key, value, category } = req.body;
     const setting = await prisma.siteSetting.update({
@@ -53,7 +56,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete a site setting (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.siteSetting.delete({ where: { id: req.params.id } });
     res.json({ message: 'Paramètre supprimé' });

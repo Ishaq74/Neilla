@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -9,7 +9,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const content = await prisma.siteContent.findMany({ orderBy: { page: 'asc', section: 'asc' } });
-    res.json(content);
+    if (!content || content.length === 0) {
+      return res.status(404).json({ error: 'No content found' });
+    }
+    res.status(200).json(content);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -20,14 +23,14 @@ router.get('/:id', async (req, res) => {
   try {
     const content = await prisma.siteContent.findUnique({ where: { id: req.params.id } });
     if (!content) return res.status(404).json({ error: 'Contenu non trouvé' });
-    res.json(content);
+    res.status(200).json(content);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
 // Create new content (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { page, section, content } = req.body;
     if (!page || !section || !content) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -39,7 +42,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update content (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { page, section, content } = req.body;
     const updated = await prisma.siteContent.update({
@@ -53,7 +56,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete content (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.siteContent.delete({ where: { id: req.params.id } });
     res.json({ message: 'Contenu supprimé' });

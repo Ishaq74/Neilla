@@ -1,16 +1,17 @@
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { db } from '../database.js';
-
-type LocalClient = Omit<import('@prisma/client').Client, 'phone'> & { phone?: string };
+import { auth } from '../lib/auth';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 
 // Get all clients (admin only)
-router.get('/', authenticateToken, requireAdmin, (req, res) => {
+router.get('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
-    const clients = db.getAllClients();
-    res.json(clients);
+    const clients = await prisma.client.findMany({ orderBy: { createdAt: 'desc' } });
+    if (!clients || clients.length === 0) {
+      return res.status(404).json({ error: 'No clients found' });
+    }
+    res.status(200).json(clients);
   } catch (error) {
     console.error('Error fetching clients:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -18,13 +19,13 @@ router.get('/', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Get client by ID (admin only)
-router.get('/:id', authenticateToken, requireAdmin, (req, res) => {
+router.get('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
-    const client = db.getClientById(req.params.id);
+    const client = await prisma.client.findUnique({ where: { id: req.params.id } });
     if (!client) {
       return res.status(404).json({ error: 'Client not found' });
     }
-    res.json(client);
+    res.status(200).json(client);
   } catch (error) {
     console.error('Error fetching client:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -32,22 +33,20 @@ router.get('/:id', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Create new client
-router.post('/', (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { firstName, lastName, email, phone } = req.body;
-    
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ error: 'First name, last name, and email are required' });
     }
-
-    const clientData = {
-      firstName,
-      lastName,
-      email,
-      phone: typeof phone === 'string' ? phone : undefined
-    };
-
-    const newClient = db.createClient(clientData);
+    const newClient = await prisma.client.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone: typeof phone === 'string' ? phone : undefined,
+      },
+    });
     res.status(201).json(newClient);
   } catch (error) {
     if (error instanceof Error && error.message.includes('already exists')) {
@@ -59,23 +58,18 @@ router.post('/', (req, res) => {
 });
 
 // Update client (admin only)
-router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { firstName, lastName, email, phone } = req.body;
-    
-    const updateData: Partial<LocalClient> = {
-      ...(firstName ? { firstName } : {}),
-      ...(lastName ? { lastName } : {}),
-      ...(email ? { email } : {}),
-      ...(phone !== undefined ? { phone: typeof phone === 'string' ? phone : undefined } : {})
-    };
-
-    if (updateData.phone === null) updateData.phone = undefined;
-    const updatedClient = db.updateClient(req.params.id, updateData);
-    if (!updatedClient) {
-      return res.status(404).json({ error: 'Client not found' });
-    }
-
+    const updateData: any = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (email) updateData.email = email;
+    if (phone !== undefined) updateData.phone = typeof phone === 'string' ? phone : undefined;
+    const updatedClient = await prisma.client.update({
+      where: { id: req.params.id },
+      data: updateData,
+    });
     res.json(updatedClient);
   } catch (error) {
     if (error instanceof Error && error.message.includes('already exists')) {
@@ -87,13 +81,9 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Delete client (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
-    const deleted = db.deleteClient(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Client not found' });
-    }
-
+    await prisma.client.delete({ where: { id: req.params.id } });
     res.json({ message: 'Client deleted successfully' });
   } catch (error) {
     console.error('Error deleting client:', error);

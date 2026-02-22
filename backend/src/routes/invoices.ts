@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -27,7 +27,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create invoice (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { clientId, invoiceNumber, issueDate, dueDate, status, subtotal, taxAmount, taxRate, total, notes, items } = req.body;
     if (!clientId || !invoiceNumber || !issueDate || !dueDate) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -45,7 +45,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update invoice (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { clientId, invoiceNumber, issueDate, dueDate, status, subtotal, taxAmount, taxRate, total, notes } = req.body;
     const invoice = await prisma.invoice.update({
@@ -60,7 +60,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete invoice (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.invoice.delete({ where: { id: req.params.id } });
     res.json({ message: 'Facture supprimée' });
@@ -70,7 +70,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // CRUD Invoice Items
-router.post('/:invoiceId/items', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/:invoiceId/items', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { description, quantity, unitPrice, total } = req.body;
     if (!description || !quantity || !unitPrice) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -81,7 +81,7 @@ router.post('/:invoiceId/items', authenticateToken, requireAdmin, async (req, re
   }
 });
 
-router.put('/items/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/items/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { description, quantity, unitPrice, total } = req.body;
     const item = await prisma.invoiceItem.update({ where: { id: req.params.id }, data: { description, quantity, unitPrice, total } });
@@ -91,7 +91,7 @@ router.put('/items/:id', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-router.delete('/items/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/items/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.invoiceItem.delete({ where: { id: req.params.id } });
     res.json({ message: 'Ligne supprimée' });

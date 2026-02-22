@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { auth } from '../lib/auth';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -27,7 +27,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create a new theme setting (admin only)
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, colors, fonts, isActive } = req.body;
     if (!name || !colors || !fonts) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -39,7 +39,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update a theme setting (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     const { name, colors, fonts, isActive } = req.body;
     const setting = await prisma.themeSetting.update({
@@ -53,7 +53,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Delete a theme setting (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', auth.express.requireAuth, auth.express.requireRole('admin'), async (req, res) => {
   try {
     await prisma.themeSetting.delete({ where: { id: req.params.id } });
     res.json({ message: 'Thème supprimé' });
