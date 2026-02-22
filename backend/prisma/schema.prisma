@@ -1,0 +1,316 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  name         String
+  description  String
+  price        Float
+  duration     Int           // en minutes
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+
+  categoryId   String?
+  category     ServiceCategory? @relation(fields: [categoryId], references: [id])
+
+  @@map("services")
+}
+
+model Formation {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  duration     Int           // en heures
+  level        String        // "débutant", "intermédiaire", "avancé"
+  price        Float
+  maxStudents  Int           @default(10)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+
+  categoryId   String?
+  category     FormationCategory? @relation(fields: [categoryId], references: [id])
+
+  @@map("formations")
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String        @unique
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[]
+  invoices     Invoice[]
+
+  @@map("clients")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  clientId    String
+  invoiceNumber String
+  issueDate   String
+  dueDate     String
+  status      String
+  subtotal    Float
+  taxAmount   Float
+  taxRate     Float
+  total       Float
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  items       InvoiceItem[]
+  client      Client       @relation(fields: [clientId], references: [id])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String     @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
+  @@map("invoice_items")
+}
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  page      String
+  section   String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("site_content")
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  date        DateTime
+  time        String            // format "HH:mm"
+  status      ReservationStatus @default(PENDING)
+  notes       String?
+  clientId    String
+  serviceId   String?
+  formationId String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  client    Client     @relation(fields: [clientId], references: [id])
+  service   Service?   @relation(fields: [serviceId], references: [id])
+  formation Formation? @relation(fields: [formationId], references: [id])
+
+  @@map("reservations")
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  rating    Int      @default(5)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+model ServiceCategory {
+  id        String   @id @default(cuid())
+  name      String
+  services  Service[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("service_categories")
+}
+
+model FormationCategory {
+  id        String   @id @default(cuid())
+  name      String
+  formations Formation[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("formation_categories")
+}
+
+model MediaLibrary {
+  id        String   @id @default(cuid())
+  name      String
+  fileUrl   String
+  fileType  String
+  fileSize  Int?
+  altText   String?
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("media_library")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String
+  firstName String
+  lastName  String
+  email     String
+  avatarUrl String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("profiles")
+}
+
+model Quote {
+  id        String   @id @default(cuid())
+  clientId  String?
+  quoteNumber String
+  issueDate String
+  validUntil String
+  status    String
+  subtotal  Float
+  taxAmount Float
+  taxRate   Float
+  total     Float
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  quoteItems QuoteItem[]
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id        String   @id @default(cuid())
+  quoteId   String
+  description String
+  serviceId String?
+  formationId String?
+  quantity  Int
+  unitPrice Float
+  total     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  quote     Quote   @relation(fields: [quoteId], references: [id])
+  @@map("quote_items")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String
+  value     String
+  category  String
+  updatedAt DateTime?
+  @@map("site_settings")
+}
+
+model ThemeSetting {
+  id        String   @id @default(cuid())
+  name      String
+  colors    String
+  fonts     String
+  isActive  Boolean?
+  updatedAt DateTime?
+  createdAt DateTime?
+  @@map("theme_settings")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  role      UserRole
+  createdAt DateTime @default(now())
+  @@map("user_roles")
+}
+
+model BlogCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String
+  color     String?
+  description String?
+  createdAt DateTime @default(now())
+  @@map("blog_categories")
+}
+
+model BlogPost {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String
+  content   String
+  excerpt   String?
+  coverImageUrl String?
+  authorId  String
+  category  String?
+  status    String
+  tags      String?
+  publishedAt DateTime?
+  viewsCount Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("blog_posts")
+}
+
+model BlogComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  isApproved Boolean @default(false)
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("blog_comments")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  userId    String
+  displayName String
+  role      String
+  bio       String?
+  avatarUrl String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("team_members")
+}

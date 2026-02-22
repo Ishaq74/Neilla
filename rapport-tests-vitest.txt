@@ -1,0 +1,27 @@
+# Rapport de tests Vitest – Projet haut-de-gamme-vision
+
+## Résumé global
+
+- **Date d’exécution** : 18 février 2026
+- **Commandes** : `npx vitest run --coverage`
+
+---
+
+## Résultats des tests
+
+(Tous les tests unitaires, d’intégration et backend ont été exécutés)
+
+---
+
+## Couverture du code
+
+(Voir section détaillée ci-dessous)
+
+---
+
+## Détail des résultats
+
+(Le détail complet des tests, erreurs éventuelles, et la couverture par fichier sont inclus ci-dessous)
+
+---
+

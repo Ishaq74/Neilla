@@ -1,0 +1,65 @@
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+
+const prisma = new PrismaClient();
+const router = express.Router();
+
+// Get all media
+router.get('/', async (req, res) => {
+  try {
+    const media = await prisma.mediaLibrary.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(media);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Get a single media by id
+router.get('/:id', async (req, res) => {
+  try {
+    const media = await prisma.mediaLibrary.findUnique({ where: { id: req.params.id } });
+    if (!media) return res.status(404).json({ error: 'Fichier non trouvé' });
+    res.json(media);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Create a new media (admin only)
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, fileUrl, fileType, fileSize, altText, category } = req.body;
+    if (!name || !fileUrl || !fileType) return res.status(400).json({ error: 'Champs requis manquants' });
+    const media = await prisma.mediaLibrary.create({ data: { name, fileUrl, fileType, fileSize, altText, category } });
+    res.status(201).json(media);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Update a media (admin only)
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, fileUrl, fileType, fileSize, altText, category } = req.body;
+    const media = await prisma.mediaLibrary.update({
+      where: { id: req.params.id },
+      data: { name, fileUrl, fileType, fileSize, altText, category },
+    });
+    res.json(media);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Delete a media (admin only)
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await prisma.mediaLibrary.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Fichier supprimé' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+export default router;
